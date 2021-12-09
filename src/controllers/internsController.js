@@ -51,6 +51,13 @@ const createInterns = async function (req, res) {
             res.status(400).send({status: false, message: `Mobile is required`})
             return
         }
+        const isMobileAlreadyUsed = await internModel.findOne({mobile});
+
+        if(isMobileAlreadyUsed) {
+            res.status(400).send({status: false, message: `${mobile} mobile is already registered`})
+            return
+        }
+
         if(!(String(mobile).length===10)){
             res.status(400).send({status: false, message: `given mobile:${mobile} is not of valid 10 Digit number`})
             return
@@ -105,7 +112,7 @@ const giveAllInterns = async function (req, res) {
         }
 
         let { _id,name,fullName,logoLink } = collegeDetail
-        let allInterns = await internModel.find({ collegeId: _id, isDeleted: false })
+        let allInterns = await internModel.find({ collegeId: _id, isDeleted: false }).select({name:1,email:1,mobile:1})
 
         
         let College={name,fullName,logoLink,interest:allInterns}
