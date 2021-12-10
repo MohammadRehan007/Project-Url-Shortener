@@ -1,4 +1,31 @@
 const mongoose = require('mongoose')
+const URLSchema = new mongoose.Schema({
+    urlCode:{
+        type:String,
+        required:true,
+        unique:true,
+        trim:true,
+        lowercase:true
+  },
+    longUrl: {
+        type:String,
+        required:true
+    },
+    shortUrl: {
+        type:String,
+        unique:true,
+        required:true
+    }}, { timestamps: true })
+
+
+module.exports = mongoose.model('Url', URLSchema)
+
+//{ urlCode: { mandatory, unique, lowercase, trim }, longUrl: {mandatory, valid url}, shortUrl: {mandatory, unique} }
+
+
+
+
+/*const mongoose = require('mongoose')
 const validator=require('validator')
 const objectId = mongoose.Schema.Types.ObjectId
 const internSchema = new mongoose.Schema({
@@ -38,3 +65,4 @@ const internSchema = new mongoose.Schema({
     }
 }, { timestamps: true })
 module.exports = mongoose.model('InternDb', internSchema)
+*/
