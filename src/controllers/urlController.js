@@ -32,66 +32,55 @@ const isValidRequestBody = function (requestBody) {
     return Object.keys(requestBody).length > 0
 }
 
-
-
-const generateUrl=async function(req,res){
+const generateUrl = async function (req, res) {
     if (!isValidRequestBody(req.body)) {
         return res.status(400).send({ status: false, message: 'Invalid request parameters. Please provide long url' })
     }
-//destructuring
-    const {longUrl} = req.body 
-    //const baseUrl = 'http:localhost:3000'
-    
+
+    //destructuring
+    const { longUrl } = req.body
+
     //check base url is valid or not
     if (!validUrl.isUri(baseUrl)) {
-        return res.status(401).send({status:false, msg:'Invalid base URL'})
+        return res.status(401).send({ status: false, msg: 'Invalid base URL' })
     }
-    
     const urlCode = shortid.generate()
-   
+
     //check long url is valid or not
-    if (validUrl.isUri(longUrl)){
-        try{
-            let cachedUrlData = await GET_ASYNC(`${longUrl}`)
-            if(cachedUrlData) {
-              res.send(cachedUrlData)
-            } else {
-              let urlData = await urlModel.findOne({longUrl:longUrl});
-              await SET_ASYNC(`${longUrl}`, JSON.stringify(urlData))
-              if(urlData){
-                res.status(200).send({status:true,data:urlData})
+    if (validUrl.isUri(longUrl)) {
+        try {
+            let url = await urlModel.findOne({ longUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1 })
+            if (url) {
+                res.status(200).send({ status: true, data: url })
             }
-            else{
+            else {
                 const shortUrl = baseUrl + '/' + urlCode
-                let shortUrlInLowerCase=shortUrl.toLowerCase()
-            
-                url ={
-                    longUrl:longUrl,
-                    shortUrl:shortUrlInLowerCase,
-                    urlCode:urlCode,
-                    
+                let shortUrlInLowerCase = shortUrl.toLowerCase()
+
+                url = {
+                    longUrl: longUrl,
+                    shortUrl: shortUrlInLowerCase,
+                    urlCode: urlCode,
+
                 }
-                
-                const myShortUrl=await urlModel.create(url)
-    
-            res.status(201).send({status:true,data:myShortUrl})
+
+                const myShortUrl = await urlModel.create(url)
+
+                res.status(201).send({ status: true, data: myShortUrl })
+            }
+        }
+        catch (err) {
+            res.status(500).send({ status: false, msg: err.message })
+
         }
     }
-
-              //res.send({ data: urlData });
-}//try   
-            
-        //let url= await urlModel.findOne({longUrl}).select({longUrl:1, shortUrl:1, urlCode:1 } )
-        
-catch(err){
-    res.status(500).send({status:false,msg:err.message})
-
-}
-}
-    else{
+    else {
         res.status(401).send("Invalid long url")
     }
 }
+
+
+
 
 //.select({longUrl:1, shortUrl:1, urlCode:1 } )
 
@@ -99,6 +88,38 @@ catch(err){
 //--------------------------------------------------------------------------------------------------
 
 const redirectToUrlCode=async function(req,res){
+    try{
+    const urlCode=req.params.urlCode
+    //finding in cache
+    let cachedUserData=await GET_ASYNC(`${urlCode}`)
+    if(cachedUserData){
+        res.send(cachedUserData)
+    }
+    else{
+        const findUrl=await urlModel.findOne({urlCode:urlCode})
+        //await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl))
+        if (findUrl) {
+            // when valid we perform a redirect
+            res.status(302).redirect(findUrl.longUrl)
+            //setting or storing data  in cache
+            await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl))
+            } 
+        else {
+            // else return a not found 404 status
+            return res.status(404).send({status:false, msg:"No URL Found"})
+        }
+        }
+    }
+catch(err){
+    return res.status(500).send({status:false, msg:err.message})
+}
+}
+
+
+
+module.exports.redirectToUrlCode=redirectToUrlCode
+module.exports.generateUrl=generateUrl
+/*const redirectToUrlCode=async function(req,res){
     try{
     const urlCode=req.params.urlCode
     const findUrl=await urlModel.findOne({urlCode:urlCode})
@@ -112,13 +133,8 @@ const redirectToUrlCode=async function(req,res){
 }
 catch(err){
     return res.status(500).send({status:false, msg:err.message})
-}
-}
+}*/
 
-
-
-module.exports.redirectToUrlCode=redirectToUrlCode
-module.exports.generateUrl=generateUrl
 
 
 
