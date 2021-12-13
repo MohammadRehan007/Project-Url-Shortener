@@ -3,40 +3,86 @@ const validUrl = require('valid-url')
 const shortid = require('shortid');
 
 const baseUrl = 'http:localhost:3000'
+
+const redis = require("redis");
+
+const { promisify } = require("util");
+
+//Connect to redis
+const redisClient = redis.createClient(
+  17647,
+  "redis-17647.c264.ap-south-1-1.ec2.cloud.redislabs.com",
+  { no_ready_check: true }
+);
+redisClient.auth("QsltswDsKsJOS9xJHPyXM1b0YWGgOy9U", function (err) {
+  if (err) throw err;
+});
+
+redisClient.on("connect", async function () {
+  console.log("Connected to Redis..");
+});
+
+//Connection setup for redis
+
+const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
+const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
+
+
+const isValidRequestBody = function (requestBody) {
+    return Object.keys(requestBody).length > 0
+}
+
+
+
 const generateUrl=async function(req,res){
-   
-    //destructuring
+    if (!isValidRequestBody(req.body)) {
+        return res.status(400).send({ status: false, message: 'Invalid request parameters. Please provide long url' })
+    }
+//destructuring
     const {longUrl} = req.body 
+    //const baseUrl = 'http:localhost:3000'
     
     //check base url is valid or not
     if (!validUrl.isUri(baseUrl)) {
         return res.status(401).send({status:false, msg:'Invalid base URL'})
     }
+    
     const urlCode = shortid.generate()
    
     //check long url is valid or not
     if (validUrl.isUri(longUrl)){
         try{
-        let url= await urlModel.findOne({longUrl}).select({longUrl:1, shortUrl:1, urlCode:1 } )
-        if(url){
-            res.status(200).send({status:true,data:url})
-        }
-        else{
-            const shortUrl = baseUrl + '/' + urlCode
-            let shortUrlInLowerCase=shortUrl.toLowerCase()
-        
-            url ={
-                longUrl:longUrl,
-                shortUrl:shortUrlInLowerCase,
-                urlCode:urlCode,
-                
+            let cachedUrlData = await GET_ASYNC(`${longUrl}`)
+            if(cachedUrlData) {
+              res.send(cachedUrlData)
+            } else {
+              let urlData = await urlModel.findOne({longUrl:longUrl});
+              await SET_ASYNC(`${longUrl}`, JSON.stringify(urlData))
+              if(urlData){
+                res.status(200).send({status:true,data:urlData})
             }
+            else{
+                const shortUrl = baseUrl + '/' + urlCode
+                let shortUrlInLowerCase=shortUrl.toLowerCase()
             
-            const myShortUrl=await urlModel.create(url)
-
-        res.status(201).send({status:true,data:myShortUrl})
+                url ={
+                    longUrl:longUrl,
+                    shortUrl:shortUrlInLowerCase,
+                    urlCode:urlCode,
+                    
+                }
+                
+                const myShortUrl=await urlModel.create(url)
+    
+            res.status(201).send({status:true,data:myShortUrl})
+        }
     }
-}
+
+              //res.send({ data: urlData });
+}//try   
+            
+        //let url= await urlModel.findOne({longUrl}).select({longUrl:1, shortUrl:1, urlCode:1 } )
+        
 catch(err){
     res.status(500).send({status:false,msg:err.message})
 
