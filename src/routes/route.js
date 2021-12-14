@@ -6,9 +6,9 @@ const urlController = require('../controllers/urlController');
 
 
 
-//1)for saving college details
+
 router.post('/url/shorten', urlController.generateUrl);
-router.get('/:urlCode', urlController.redirectToUrlCode);
+router.get('/:urlCode', urlController.redirectToLongUrl);
 
 
 
