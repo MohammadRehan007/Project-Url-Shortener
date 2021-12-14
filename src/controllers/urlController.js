@@ -1,8 +1,9 @@
 const urlModel = require('../models/urlModel');
-const validUrl = require('valid-url')
+//const validUrl = require('valid-url')
+const isUrlValid = require('url-validation')
 const shortid = require('shortid');
 
-const baseUrl = 'http:localhost:3000'
+const baseUrl = 'http://localhost:3000'
 
 const redis = require("redis");
 
@@ -31,24 +32,35 @@ const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
 const isValidRequestBody = function (requestBody) {
     return Object.keys(requestBody).length > 0
 }
-
+const isValid = function (value) {
+    if (typeof value === 'undefined' || value === null) return false
+    if (typeof value === 'string' && value.trim().length === 0) return false
+    return true;
+}
+//------------------------------------------------------------------------------------------------------
 const generateUrl = async function (req, res) {
     if (!isValidRequestBody(req.body)) {
         return res.status(400).send({ status: false, message: 'Invalid request parameters. Please provide long url' })
     }
-
     //destructuring
     const { longUrl } = req.body
-
-    //check base url is valid or not
+    
+    if(!isValid(longUrl)) {
+        res.status(400).send({status: false, message: `longUrl is required`})
+        return
+    }
+ //check base url is valid or not
     if (!validUrl.isUri(baseUrl)) {
         return res.status(401).send({ status: false, msg: 'Invalid base URL' })
     }
     const urlCode = shortid.generate()
 
-    //check long url is valid or not
-    if (validUrl.isUri(longUrl)) {
-        try {
+    //check long url is valid or not-http is present or not
+    if (!isUrlValid(longUrl.trim())) {
+        return res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
+        
+    }
+    try {
             let url = await urlModel.findOne({ longUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1 })
             if (url) {
                 res.status(200).send({ status: true, data: url })
@@ -56,9 +68,10 @@ const generateUrl = async function (req, res) {
             else {
                 const shortUrl = baseUrl + '/' + urlCode
                 let shortUrlInLowerCase = shortUrl.toLowerCase()
+                const trimLongUrl=longUrl.trim()
 
                 url = {
-                    longUrl: longUrl,
+                    longUrl: trimLongUrl,
                     shortUrl: shortUrlInLowerCase,
                     urlCode: urlCode,
 
@@ -74,10 +87,6 @@ const generateUrl = async function (req, res) {
 
         }
     }
-    else {
-        res.status(401).send("Invalid long url")
-    }
-}
 
 
 
@@ -90,23 +99,28 @@ const generateUrl = async function (req, res) {
 const redirectToUrlCode=async function(req,res){
     try{
     const urlCode=req.params.urlCode
-    //finding in cache
+    //finding longUrl in cache through urlCode
     let cachedUserData=await GET_ASYNC(`${urlCode}`)
+    
     if(cachedUserData){
-        res.send(cachedUserData)
+        const parseLongUrl=JSON.parse(cachedUserData)
+        
+        res.status(302).redirect(parseLongUrl.longUrl)
     }
     else{
         const findUrl=await urlModel.findOne({urlCode:urlCode})
         //await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl))
-        if (findUrl) {
+        if (!findUrl) {
+            // else return a not found 404 status
+            return res.status(404).send({status:false, msg:"No URL Found"})
+            
+            } 
+        else {
             // when valid we perform a redirect
             res.status(302).redirect(findUrl.longUrl)
             //setting or storing data  in cache
             await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl))
-            } 
-        else {
-            // else return a not found 404 status
-            return res.status(404).send({status:false, msg:"No URL Found"})
+            
         }
         }
     }
@@ -119,6 +133,13 @@ catch(err){
 
 module.exports.redirectToUrlCode=redirectToUrlCode
 module.exports.generateUrl=generateUrl
+
+
+
+if (!isUrlValid(longUrl.trim())) {
+    return res.status(400).send({ status: false, message: "longUrl is not valid, Please provide valid url" })
+    
+}
 /*const redirectToUrlCode=async function(req,res){
     try{
     const urlCode=req.params.urlCode
