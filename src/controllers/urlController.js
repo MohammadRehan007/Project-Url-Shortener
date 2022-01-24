@@ -56,7 +56,7 @@ const generateUrl = async function (req, res) {
     }
     try {
         let myUrl=longUrl.trim().split(' ').join('')
-            let url = await urlModel.findOne({ longUrl:myUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1 })
+            let url = await urlModel.findOne({ longUrl:myUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id:0 })
             if (url) {
                 res.status(200).send({ status: true, data: url })
                 }
@@ -108,7 +108,7 @@ const redirectToLongUrl=async function(req,res){
             // when valid we perform a redirect
             res.status(302).redirect(findUrl.longUrl)
             //setting or storing data  in cache
-            await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl))
+            await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl)).select({_id:0})
             }
         }
     }
