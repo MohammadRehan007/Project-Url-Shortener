@@ -3,28 +3,28 @@ const isUrlValid = require('url-validation')
 const shortid = require('shortid');
 const baseUrl = 'http://localhost:3000'
 //-----------------------------redis for cache--------------------------------------------------------
-const redis = require("redis");
+// const redis = require("redis");
 
-const { promisify } = require("util");
+// const { promisify } = require("util");
 
-//Connect to redis
-const redisClient = redis.createClient(
-  15036,
-  "redis-15036.c276.us-east-1-2.ec2.cloud.redislabs.com",
-  { no_ready_check: true }
-);
-redisClient.auth("fTrarrrXRZg7X66UGqgfMu3QA6K3fttr", function (err) {
-  if (err) throw err;
-});
+// //Connect to redis
+// const redisClient = redis.createClient(
+//   15036,
+//   "redis-15036.c276.us-east-1-2.ec2.cloud.redislabs.com",
+//   { no_ready_check: true }
+// );
+// redisClient.auth("fTrarrrXRZg7X66UGqgfMu3QA6K3fttr", function (err) {
+//   if (err) throw err;
+// });
 
-redisClient.on("connect", async function () {
-  console.log("Connected to Redis..");
-});
+// redisClient.on("connect", async function () {
+//   console.log("Connected to Redis..");
+// });
 
-//Connection setup for redis
+// //Connection setup for redis
 
-const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
-const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
+// const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
+// const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
 
 //------------------------validation functions----------------------------------------------------------
 const isValidRequestBody = function (requestBody) {
@@ -86,41 +86,41 @@ const generateUrl = async function (req, res) {
 
 //---------------------------second api to redirect--------------------------------------------------
 
-const redirectToLongUrl=async function(req,res){
-    try{
-    const urlCode=req.params.urlCode.toLowerCase().trim().split(' ').join('')
+// const redirectToLongUrl=async function(req,res){
+//     try{
+//     const urlCode=req.params.urlCode.toLowerCase().trim().split(' ').join('')
     
-    //finding longUrl in cache through urlCode
-    let cachedUrlData=await GET_ASYNC(`${urlCode}`)
+//     //finding longUrl in cache through urlCode
+//     let cachedUrlData=await GET_ASYNC(`${urlCode}`)
     
-    if(cachedUrlData){
-        const parseLongUrl=JSON.parse(cachedUrlData)
+//     if(cachedUrlData){
+//         const parseLongUrl=JSON.parse(cachedUrlData)
         
-        res.status(302).redirect(parseLongUrl.longUrl)
-    }
-    else{
-        const findUrl=await urlModel.findOne({urlCode:urlCode})
-        if (!findUrl) {
-            // return a not found 404 status
-            return res.status(404).send({status:false, msg:"No URL Found"})
-            } 
-        else {
-            // when valid we perform a redirect
-            res.status(302).redirect(findUrl.longUrl)
-            //setting or storing data  in cache
-            await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl)).select({_id:0})
-            }
-        }
-    }
-catch(err){
-    return res.status(500).send({status:false, msg:err.message})
-}
-}
+//         res.status(302).redirect(parseLongUrl.longUrl)
+//     }
+//     else{
+//         const findUrl=await urlModel.findOne({urlCode:urlCode})
+//         if (!findUrl) {
+//             // return a not found 404 status
+//             return res.status(404).send({status:false, msg:"No URL Found"})
+//             } 
+//         else {
+//             // when valid we perform a redirect
+//             res.status(302).redirect(findUrl.longUrl)
+//             //setting or storing data  in cache
+//             await SET_ASYNC(`${urlCode}`, JSON.stringify(findUrl)).select({_id:0})
+//             }
+//         }
+//     }
+// catch(err){
+//     return res.status(500).send({status:false, msg:err.message})
+// }
+// }
 
 
 
-module.exports.redirectToLongUrl=redirectToLongUrl
-module.exports.generateUrl=generateUrl
+// module.exports.redirectToLongUrl=redirectToLongUrl
+ module.exports.generateUrl=generateUrl
 
 
 

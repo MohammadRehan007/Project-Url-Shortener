@@ -8,7 +8,7 @@ const urlController = require('../controllers/urlController');
 
 
 router.post('/url/shorten', urlController.generateUrl);
-router.get('/:urlCode', urlController.redirectToLongUrl);
+//router.get('/:urlCode', urlController.redirectToLongUrl);
 
 
 
